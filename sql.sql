@@ -241,3 +241,10 @@ select d.dept_name, avg(e.salary) from emp e JOIN depart d ON d.dept_id = e.depa
 
 select d.depart_name, avg(e.salary) as Average from emp e JOIN depart d ON d.dept_id = e.department_no group by d.depart_name order by Average limit 1;
 
+/* 
+    Advanced Self-Join with Recursive Manager-Employee Hierarchies
+
+    Write a query to display each employee’s name, department, hire date, manager’s name, and the manager’s hire date.
+    For employees who joined before their manager, highlight them in the result set by adding a Status column labeled 'Hired Before Manager'.
+
+*/
