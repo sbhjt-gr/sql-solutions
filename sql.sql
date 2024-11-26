@@ -191,7 +191,7 @@ delete from emp_day4 where salary > 100000;
 
 /* Count the number of employees in each department. */
 
-select department_no, count(id) as "Count" from emp_day4 group by department_no ; 
+select department_no, count(id) as "Count" from emp_day4 group by department_no; 
 
 /* Find the number of managers without listing them, labeled "Number of Managers". */
 
@@ -242,9 +242,236 @@ select d.dept_name, avg(e.salary) from emp e JOIN depart d ON d.dept_id = e.depa
 select d.depart_name, avg(e.salary) as Average from emp e JOIN depart d ON d.dept_id = e.department_no group by d.depart_name order by Average limit 1;
 
 /* 
-    Advanced Self-Join with Recursive Manager-Employee Hierarchies
+Consider the following relational database: 
+   Suppliers(supplier_id, supplier_name, address) 
+   Parts(part_id, part_name, color) 
+   Catalog(supplier_id, part_id, cost) 
+   For each of the following queries, 
+   (i) Find the names of suppliers who supply some red part 
+   (ii) Find the supplier_ids of suppliers who supply every part 
+   (iii) Find the part_ids of the most expensive parts supplied by suppliers named “Pipe Supplier”. 
+ Give an expression in SQL.
 
-    Write a query to display each employee’s name, department, hire date, manager’s name, and the manager’s hire date.
-    For employees who joined before their manager, highlight them in the result set by adding a Status column labeled 'Hired Before Manager'.
+Suppliers Table:
+
+| supplier_id | supplier_name | address |
+
+    | 1 | Supplier A | 123 Main St, City A |
+    | 2 | Supplier B | 456 Elm St, City B |
+    | 3 | Supplier C | 789 Oak St, City C |
+
+Parts Table:
+| part_id | part_name | color |
+
+        | 1 | Part X | Red |
+        | 2 | Part Y | Blue |
+        | 3 | Part Z | Red |
+
+3. Catalog Table:
+| supplier_id | part_id | cost |
+
+                | 1 | 1 | 100 |
+                | 1 | 2 | 150 |
+                | 2 | 1 | 120 |
+                | 3 | 3 | 200 |
 
 */
+
+select distinct s.supplier_name
+from Suppliers s
+join Catalog c on s.supplier_id = c.supplier_id
+join Parts p on c.part_id = p.part_id
+where p.color = 'Red';
+
+select c.supplier_id
+from Catalog c
+group by c.supplier_id
+having count(distinct c.part_id) = (select count(*) from Parts);
+
+select c.part_id
+from Catalog c
+join Suppliers s on c.supplier_id = s.supplier_id
+where s.supplier_name = 'Pipe Supplier'
+and c.cost = (select max(cost) from Catalog where supplier_id = s.supplier_id);
+
+/* The tables in the database of a engineering college are as follows: 
+   STUDENT(rollno, name, courseId, session); 
+   COURSE(courseId,courseName, Dept_Id);  
+   SUBJECT_PAPER(pcode, pname, courseId, semesterNo) ;  
+   MARKS_OBTAINED(rollno, pcode, marks, year_of_exam);  
+   DEPARTMENT(Dept_Id, Dname); 
+   Faculty(empid, name, sal, Dept_id);  
+   Subject_Taught(empid, pcode, session); 
+   Write the SQL statement for the following queries using the given tables: 
+
+   (i) Find the name of the topper(s) of CSE 1st Semester of 2005 session. 
+   [Note: topper of a semester means one who obtained maximum aggregate marks considering all  subjects of that semester] 
+   (ii) Find the faculties who have taught maximum number of subjects in odd Semester of 2017 session and display their name along with number of subjects taught. 
+   (iii) Display the name of the department that conducts course named “M.Tech in VLSI Design”. 
+   (iv) Display the lowest salary of each department along with department name, in the descending order of the department’s lowest salary. 
+
+STUDENT Table:
+| rollno | name | courseId | session |
+
+| 1 | Alice | 101 | 2023-2024 |
+| 2 | Bob | 102 | 2023-2024 |
+| 3 | Charlie | 101 | 2023-2024 |
+
+COURSE Table:
+| courseId | courseName | Dept_Id |
+
+| 101 | Computer Science | 1 |
+| 102 | Mathematics | 2 |
+
+3. SUBJECT_PAPER Table:
+| pcode | pname | courseId | semesterNo |
+
+| 1 | Data Structures | 101 | 1 |
+| 2 | Calculus | 102 | 1 |
+| 3 | Algorithms | 101 | 2 |
+
+MARKS_OBTAINED Table:
+| rollno | pcode | marks | year_of_exam |
+
+| 1 | 1 | 85 | 2023 |
+| 2 | 2 | 90 | 2023 |
+| 1 | 3 | 78 | 2023 |
+
+DEPARTMENT Table:
+| Dept_Id | Dname |
+
+| 1 | Engineering |
+| 2 | Mathematics |
+
+6. Faculty Table:
+| empid | name | sal | Dept_id |
+
+| 1 | Dr. Smith | 75000 | 1 |
+| 2 | Prof. Johnson | 70000 | 2 |
+
+Subject_Taught Table:
+| empid | pcode | session |
+
+| 1 | 1 | 2023-2024 |
+| 2 | 2 | 2023-2024 |
+| 1 | 3 | 2023-2024 |
+*/
+
+select s.name
+from STUDENT s
+join MARKS_OBTAINED m on s.rollno = m.rollno
+join SUBJECT_PAPER sp on m.pcode = sp.pcode
+join COURSE c on s.courseId = c.courseId
+where c.courseName = 'Computer Science' 
+  and sp.semesterNo = 1 
+  and s.session = '2005'
+group by s.rollno, s.name
+having sum(m.marks) = (
+    select max(total_marks)
+    from (
+        select sum(marks) as total_marks
+        from MARKS_OBTAINED m
+        join SUBJECT_PAPER sp on m.pcode = sp.pcode
+        join STUDENT s on m.rollno = s.rollno
+        where sp.semesterNo = 1 
+          and s.session = '2005'
+        group by m.rollno
+    )
+);
+
+select f.name
+from Faculty f
+join Subject_Taught st on f.empid = st.empid
+join SUBJECT_PAPER sp on st.pcode = sp.pcode
+where sp.semesterNo in (1, 3) 
+  and st.session = '2017'
+group by f.empid, f.name
+having count(st.pcode) = (
+    select max(subject_count)
+    from (
+        select count(st.pcode) as subject_count
+        from Faculty f
+        join Subject_Taught st on f.empid = st.empid
+        join SUBJECT_PAPER sp on st.pcode = sp.pcode
+        where sp.semesterNo in (1, 3)
+          and st.session = '2017'
+        group by f.empid
+    )
+);
+
+select d.Dname
+from DEPARTMENT d
+join COURSE c on d.Dept_Id = c.Dept_Id
+where c.courseName = 'M.Tech in VLSI Design';
+
+select d.Dname, min(f.sal) as lowest_salary
+from DEPARTMENT d
+join Faculty f on d.Dept_Id = f.Dept_id
+group by d.Dept_Id, d.Dname
+order by lowest_salary desc;
+
+/* Given relational schema: 
+   Sailors (sid, sname, rating, age) 
+   Reserves (sid, bid, date) 
+   Boats (bid, bname, color) 
+   1) Find names of sailors who’ve reserved boat id 103 
+   2) Find names of sailors who’ve reserved a red boat 
+   3) Find sailors who’ve reserved a red or a green boat 
+   4) Find sailors who’ve reserved a red and a green boat 
+   5) Find the names of sailors who’ve reserved all boats. 
+   
+   Write SQL query for the above statements. 
+     Sailors Table:
+    | sid | sname | rating | age |
+
+    | 1 | John | 5 | 25 |
+    | 2 | Alice | 3 | 30 |
+    | 3 | Bob | 4 | 22 |
+    | 4 | Charlie | 2 | 28 |
+
+    Boats Table:
+    | bid | bname | color |
+
+    | 1 | Boat A | Red |
+    | 2 | Boat B | Blue |
+    | 3 | Boat C | Green |
+
+    Reserves Table:
+    | sid | bid | date |
+
+    | 1 | 1 | 2023-06-01 |
+    | 2 | 2 | 2023-06-02 |
+    | 1 | 3 | 2023-06-03 |
+    | 3 | 1 | 2023-06-04 |
+*/
+
+select s.sname
+from Sailors s
+join Reserves r on s.sid = r.sid
+where r.bid = 103;
+
+select distinct s.sname
+from Sailors s
+join Reserves r on s.sid = r.sid
+join Boats b on r.bid = b.bid
+where b.color = 'Red';
+
+select distinct s.sname
+from Sailors s
+join Reserves r on s.sid = r.sid
+join Boats b on r.bid = b.bid
+where b.color in ('Red', 'Green');
+
+select s.sname
+from Sailors s
+join Reserves r on s.sid = r.sid
+join Boats b on r.bid = b.bid
+where b.color in ('Red', 'Green')
+group by s.sid, s.sname
+having count(distinct b.color) = 2;
+
+select s.sname
+from Sailors s
+join Reserves r on s.sid = r.sid
+group by s.sid, s.sname
+having count(distinct r.bid) = (select count(*) from Boats);
